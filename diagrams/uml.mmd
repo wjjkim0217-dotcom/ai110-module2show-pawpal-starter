@@ -1,15 +1,104 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
-
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Priority {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Category {
+        <<enumeration>>
+        WALK
+        FEEDING
+        MEDS
+        ENRICHMENT
+        GROOMING
+        OTHER
     }
 
-    ClassName --> AnotherClass : relationship
+    class Frequency {
+        <<enumeration>>
+        ONCE
+        DAILY
+        WEEKLY
+    }
+
+    class Task {
+        +str id
+        +str title
+        +int duration_minutes
+        +Priority priority
+        +Category category
+        +time fixed_time
+        +Frequency frequency
+        +int weekday
+        +str notes
+        +date completed_on
+        +validate() None
+        +is_due(day) bool
+        +mark_complete(day) None
+        +is_complete(day) bool
+        +update(**fields) None
+        +sort_key() tuple
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +list~Task~ tasks
+        +add_task(task) None
+        +remove_task(task_id) None
+        +get_task(task_id) Task
+        +tasks_due(day) list~Task~
+    }
+
+    class Owner {
+        +str name
+        +time available_start
+        +time available_end
+        +dict preferences
+        +list~Pet~ pets
+        +add_pet(pet) None
+        +remove_pet(pet) None
+        +all_tasks_due(day) list~tuple~
+        +available_minutes() int
+        +set_availability(start, end) None
+    }
+
+    class Scheduler {
+        +build_plan(owner, day) Plan
+    }
+
+    class Plan {
+        +list~ScheduledEntry~ scheduled
+        +list~UnscheduledEntry~ unscheduled
+        +list~str~ warnings
+    }
+
+    class ScheduledEntry {
+        +Task task
+        +Pet pet
+        +time start
+        +time end
+        +str reason
+    }
+
+    class UnscheduledEntry {
+        +Task task
+        +Pet pet
+        +str reason
+    }
+
+    Owner "1" *-- "0..*" Pet : has
+    Pet "1" *-- "0..*" Task : has
+    Task --> Priority
+    Task --> Category
+    Task --> Frequency
+    Scheduler ..> Owner : reads
+    Scheduler ..> Plan : creates
+    Plan "1" *-- "0..*" ScheduledEntry
+    Plan "1" *-- "0..*" UnscheduledEntry
+    ScheduledEntry --> Task
+    ScheduledEntry --> Pet
+    UnscheduledEntry --> Task
+    UnscheduledEntry --> Pet
