@@ -4,8 +4,15 @@
 
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+My initial UML separates data (who and what needs care) from planning logic (when it happens). Classes and responsibilities:
+
+- **Task**: one care activity. Holds title, duration, priority, and optional category, fixed time, and frequency. Validates itself, decides whether it is due on a given day (once/daily/weekly), and tracks completion.
+- **Pet**: owns a list of Tasks. Adds, removes, and looks up tasks, and returns the tasks due on a given day.
+- **Owner**: owns the Pets and the constraints (available time window, preferences). Gathers all due tasks across pets and validates the availability window.
+- **Scheduler**: holds the planning logic. Takes an Owner and a day, sorts tasks by priority, places fixed-time tasks first, fills the remaining gaps, and returns a Plan.
+- **Plan** (with ScheduledEntry and UnscheduledEntry): the result. Lists scheduled tasks with start/end times and a reason, unscheduled tasks with a reason, and any conflict warnings.
+
+Owner, Pet, and Task are mostly data plus validation, so the scheduling rules live in one place (Scheduler) and can be tested without the Streamlit UI.
 
 **b. Design changes**
 

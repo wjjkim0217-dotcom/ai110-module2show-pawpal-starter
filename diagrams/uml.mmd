@@ -1,9 +1,10 @@
 classDiagram
     class Priority {
         <<enumeration>>
-        LOW
-        MEDIUM
         HIGH
+        MEDIUM
+        LOW
+        +rank() int
     }
 
     class Category {
@@ -21,6 +22,13 @@ classDiagram
         ONCE
         DAILY
         WEEKLY
+    }
+
+    class Species {
+        <<enumeration>>
+        DOG
+        CAT
+        OTHER
     }
 
     class Task {
@@ -43,8 +51,9 @@ classDiagram
     }
 
     class Pet {
+        +str id
         +str name
-        +str species
+        +Species species
         +list~Task~ tasks
         +add_task(task) None
         +remove_task(task_id) None
@@ -52,14 +61,20 @@ classDiagram
         +tasks_due(day) list~Task~
     }
 
+    class Preferences {
+        +time earliest_start
+        +dict preferred_times
+    }
+
     class Owner {
         +str name
         +time available_start
         +time available_end
-        +dict preferences
+        +Preferences preferences
         +list~Pet~ pets
         +add_pet(pet) None
-        +remove_pet(pet) None
+        +remove_pet(pet_id) None
+        +get_all_tasks() list~tuple~
         +all_tasks_due(day) list~tuple~
         +available_minutes() int
         +set_availability(start, end) None
@@ -67,12 +82,18 @@ classDiagram
 
     class Scheduler {
         +build_plan(owner, day) Plan
+        -_place_fixed(entries, plan, day) None
+        -_find_gaps(owner, plan, day) list
+        -_fill_gaps(entries, gaps, plan) None
+        -_reason_for(task, placed_fixed) str
     }
 
     class Plan {
+        +date day
         +list~ScheduledEntry~ scheduled
         +list~UnscheduledEntry~ unscheduled
-        +list~str~ warnings
+        +list~Conflict~ conflicts
+        +is_stale_for(owner) bool
     }
 
     class ScheduledEntry {
@@ -89,15 +110,29 @@ classDiagram
         +str reason
     }
 
+    class Conflict {
+        +ScheduledEntry first
+        +ScheduledEntry second
+        +str message
+    }
+
+    note for Pet "id is a uuid4 string, same as Task.id.\nTwo pets may share a name and species,\nso remove and lookup use id, not name or object equality.\nTask, Pet and Owner use eq=False (identity equality)."
+    note for Scheduler "Fixed-time tasks are placed first, whatever their priority.\nFlexible tasks are placed greedily by sort_key into the first gap that fits."
+
     Owner "1" *-- "0..*" Pet : has
+    Owner "1" *-- "1" Preferences
     Pet "1" *-- "0..*" Task : has
     Task --> Priority
     Task --> Category
     Task --> Frequency
-    Scheduler ..> Owner : reads
+    Pet --> Species
+    Scheduler ..> Owner : reads via all_tasks_due
     Scheduler ..> Plan : creates
     Plan "1" *-- "0..*" ScheduledEntry
     Plan "1" *-- "0..*" UnscheduledEntry
+    Plan "1" *-- "0..*" Conflict
+    Conflict --> ScheduledEntry : first
+    Conflict --> ScheduledEntry : second
     ScheduledEntry --> Task
     ScheduledEntry --> Pet
     UnscheduledEntry --> Task
