@@ -19,6 +19,9 @@ Owner, Pet, and Task are mostly data plus validation, so the scheduling rules li
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+Each pet now has its own unique ID, the same as each task already did. Two pets can share a name and species, so the ID is how the app tells them apart. The diagram has a note saying this.
+
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
@@ -33,6 +36,10 @@ Owner, Pet, and Task are mostly data plus validation, so the scheduling rules li
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+My scheduler warns about conflicts between fixed-time tasks but does not fix them. It checks for real overlaps, not just identical start times, so a 08:00-08:30 walk and an 08:15 vet call are flagged. Both tasks stay in the plan, and the warning suggests the next free slot. It never moves or drops a fixed task on its own, even when a high-priority task clashes with a low-priority one. Flexible tasks are placed first-come into the first gap that fits, ordered by priority only, so a long low-priority task can take a gap that several shorter tasks would have fit in better.
+
+This is reasonable because a fixed time is something the owner committed to, such as a medication or a vet appointment, and the app should not quietly change it. A warning plus a suggested slot lets the owner decide. The greedy placement is also simple to read and test, and with only a handful of tasks per day a perfect packing would add complexity for very little gain.
+
 ---
 
 ## 3. AI Collaboration
@@ -45,7 +52,9 @@ Owner, Pet, and Task are mostly data plus validation, so the scheduling rules li
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
+When I asked AI to make the tests directory and the testing file, it also automatically created 30 tests which I rejected. I then prompted it to add two tests which I verified manually.
 - How did you evaluate or verify what the AI suggested?
+I use my knowledge of coding and use my judgement to evaluate whether I should accept what the AI suggested.
 
 ---
 
