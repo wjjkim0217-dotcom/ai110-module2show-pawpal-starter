@@ -172,15 +172,10 @@ class Pet:
         self.add_task(renewed)
         return renewed
 
-    def tasks_due(self, day: date) -> list[Task]:
-        """Tasks that are due on day and not yet complete."""
-        return [t for t in self.tasks if t.is_due(day) and not t.is_complete(day)]
-
 
 @dataclass
 class Preferences:
     earliest_start: time | None = None
-    preferred_times: dict[Category, time] = field(default_factory=dict)  # not used by the Scheduler yet
 
 
 @dataclass(eq=False)
@@ -292,10 +287,6 @@ class Plan:
                 if name in (c.first.pet.name.lower(), c.second.pet.name.lower())
             ],
         )
-
-    def is_stale_for(self, owner: Owner) -> bool:
-        """True if the owner's pets or tasks changed after this plan was built."""
-        pass
 
 
 class Scheduler:

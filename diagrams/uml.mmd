@@ -24,6 +24,12 @@ classDiagram
         WEEKLY
     }
 
+    class TaskStatus {
+        <<enumeration>>
+        PENDING
+        DONE
+    }
+
     class Species {
         <<enumeration>>
         DOG
@@ -42,10 +48,14 @@ classDiagram
         +int weekday
         +str notes
         +date completed_on
+        +date due_date
+        +bool renewed
         +validate() None
         +is_due(day) bool
         +mark_complete(day) None
         +is_complete(day) bool
+        +status(day) TaskStatus
+        +complete_and_renew(day) Task
         +update(**fields) None
         +sort_key() tuple
     }
@@ -58,12 +68,11 @@ classDiagram
         +add_task(task) None
         +remove_task(task_id) None
         +get_task(task_id) Task
-        +tasks_due(day) list~Task~
+        +complete_task(task_id, day) Task
     }
 
     class Preferences {
         +time earliest_start
-        +dict preferred_times
     }
 
     class Owner {
@@ -76,13 +85,20 @@ classDiagram
         +remove_pet(pet_id) None
         +get_all_tasks() list~tuple~
         +all_tasks_due(day) list~tuple~
+        +filter_tasks(pet_name, status, day) list~tuple~
         +available_minutes() int
         +set_availability(start, end) None
     }
 
     class Scheduler {
         +build_plan(owner, day) Plan
-        -_place_fixed(entries, plan, day) None
+        +mark_complete(owner, task_id, day) Task
+        +sort_by_time(tasks) list~Task~
+        +next_free_slot(owner, plan, day, duration_minutes, after) time
+        -_window(owner, day) tuple
+        -_place_fixed(entries, owner, plan, day) None
+        -_detect_conflicts(owner, plan, day) None
+        -_make_conflict(owner, plan, day, first, second) Conflict
         -_find_gaps(owner, plan, day) list
         -_fill_gaps(entries, gaps, plan) None
         -_reason_for(task, placed_fixed) str
@@ -93,7 +109,7 @@ classDiagram
         +list~ScheduledEntry~ scheduled
         +list~UnscheduledEntry~ unscheduled
         +list~Conflict~ conflicts
-        +is_stale_for(owner) bool
+        +for_pet(pet_name) Plan
     }
 
     class ScheduledEntry {
@@ -102,6 +118,7 @@ classDiagram
         +time start
         +time end
         +str reason
+        +overlaps(other) bool
     }
 
     class UnscheduledEntry {
@@ -114,10 +131,12 @@ classDiagram
         +ScheduledEntry first
         +ScheduledEntry second
         +str message
+        +bool same_pet
+        +time suggestion
     }
 
     note for Pet "id is a uuid4 string, same as Task.id.\nTwo pets may share a name and species,\nso remove and lookup use id, not name or object equality.\nTask, Pet and Owner use eq=False (identity equality)."
-    note for Scheduler "Fixed-time tasks are placed first, whatever their priority.\nFlexible tasks are placed greedily by sort_key into the first gap that fits."
+    note for Scheduler "Fixed-time tasks are placed first, whatever their priority.\nConflicts are detected among them and carry a next-free-slot suggestion.\nFlexible tasks are placed greedily by sort_key into the first gap that fits."
 
     Owner "1" *-- "0..*" Pet : has
     Owner "1" *-- "1" Preferences
@@ -125,14 +144,24 @@ classDiagram
     Task --> Priority
     Task --> Category
     Task --> Frequency
+    Task ..> TaskStatus : status
+    Task ..> Task : renews into
+    Owner ..> TaskStatus : filter_tasks
     Pet --> Species
-    Scheduler ..> Owner : reads via all_tasks_due
+    Pet ..> Task : complete_task adds successor
+    Scheduler ..> Owner : reads tasks and window
+    Scheduler ..> Preferences : earliest_start
+    Scheduler ..> Pet : mark_complete
+    Scheduler ..> Task : sort_by_time
     Scheduler ..> Plan : creates
+    Scheduler ..> ScheduledEntry : creates
+    Scheduler ..> UnscheduledEntry : creates
+    Scheduler ..> Conflict : creates
     Plan "1" *-- "0..*" ScheduledEntry
     Plan "1" *-- "0..*" UnscheduledEntry
     Plan "1" *-- "0..*" Conflict
-    Conflict --> ScheduledEntry : first
-    Conflict --> ScheduledEntry : second
+    Conflict "1" --> "1" ScheduledEntry : first
+    Conflict "1" --> "1" ScheduledEntry : second
     ScheduledEntry --> Task
     ScheduledEntry --> Pet
     UnscheduledEntry --> Task
