@@ -1,6 +1,7 @@
+import pytest
 from datetime import date, time
 
-from pawpal_system import Frequency, Owner, Pet, Scheduler, Species, Task, TaskStatus
+from pawpal_system import Frequency, Owner, Pet, Priority, Scheduler, Species, Task, TaskStatus
 
 
 def test_mark_complete_changes_task_status():
@@ -176,3 +177,108 @@ def test_tasks_at_exact_same_time_conflict_for_same_and_different_pets():
 
     assert len(conflicts) == 3  # three tasks at 09:00 -> three pairs
     assert sum(c.same_pet for c in conflicts) == 1
+
+
+# --- sorting: the built plan is chronological and priority-aware ---
+
+
+def test_build_plan_entries_are_in_chronological_order():
+    owner, mochi, luna = make_owner()
+    mochi.add_task(Task("Evening walk", 30, fixed_time=time(18, 0)))
+    luna.add_task(Task("Breakfast", 10, fixed_time=time(8, 0)))
+    mochi.add_task(Task("Brush", 15))  # flexible, fills the first gap
+
+    starts = [e.start for e in Scheduler().build_plan(owner, MONDAY).scheduled]
+
+    assert starts == sorted(starts)
+    assert starts[0] == time(7, 0)  # flexible task takes the first gap before 08:00
+
+
+def test_flexible_tasks_are_placed_by_priority():
+    owner, mochi, _ = make_owner()
+    mochi.add_task(Task("low", 10, priority=Priority.LOW))
+    mochi.add_task(Task("high", 10, priority=Priority.HIGH))
+    mochi.add_task(Task("medium", 10, priority=Priority.MEDIUM))
+
+    plan = Scheduler().build_plan(owner, MONDAY)
+
+    assert [e.task.title for e in plan.scheduled] == ["high", "medium", "low"]
+
+
+# --- edge cases ---
+
+
+def test_pet_with_no_tasks_and_owner_with_no_pets_give_empty_plan():
+    owner, _, _ = make_owner()
+    empty_owner = Owner("Sam", time(7, 0), time(21, 0))
+
+    for o in (owner, empty_owner):
+        plan = Scheduler().build_plan(o, MONDAY)
+        assert plan.scheduled == [] and plan.unscheduled == [] and plan.conflicts == []
+
+
+def test_fixed_task_outside_window_is_unscheduled():
+    owner, mochi, _ = make_owner()  # window 07:00-21:00
+    mochi.add_task(Task("Early", 30, fixed_time=time(6, 30)))
+    mochi.add_task(Task("Late", 60, fixed_time=time(20, 30)))  # ends 21:30
+
+    plan = Scheduler().build_plan(owner, MONDAY)
+
+    assert plan.scheduled == []
+    assert len(plan.unscheduled) == 2
+
+
+def test_task_exactly_filling_window_fits_but_one_minute_more_does_not():
+    owner, mochi, _ = make_owner()
+    mochi.add_task(Task("Fits", owner.available_minutes()))
+    mochi.add_task(Task("Too long", owner.available_minutes() + 1))
+
+    plan = Scheduler().build_plan(owner, MONDAY)
+
+    assert [e.task.title for e in plan.scheduled] == ["Fits"]
+    assert [e.task.title for e in plan.unscheduled] == ["Too long"]
+
+
+def test_daily_task_is_pending_tomorrow_and_not_due_twice_on_renewal_day():
+    owner, mochi, _ = make_owner()
+    feed = Task("Feed", 5, frequency=Frequency.DAILY)
+    mochi.add_task(feed)
+
+    mochi.complete_task(feed.id, MONDAY)
+
+    assert feed.status(MONDAY) is TaskStatus.DONE
+    assert feed.status(TUESDAY) is TaskStatus.PENDING
+    assert [t.title for _, t in owner.all_tasks_due(TUESDAY)] == ["Feed"]  # only the successor
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"title": "  ", "duration_minutes": 10},
+        {"title": "Walk", "duration_minutes": 0},
+        {"title": "Walk", "duration_minutes": -5},
+        {"title": "Bath", "duration_minutes": 10, "frequency": Frequency.WEEKLY},
+        {"title": "Bath", "duration_minutes": 10, "frequency": Frequency.WEEKLY, "weekday": 7},
+    ],
+)
+def test_add_task_rejects_invalid_tasks(kwargs):
+    pet = Pet("Mochi", Species.DOG)
+
+    with pytest.raises(ValueError):
+        pet.add_task(Task(**kwargs))
+
+    assert pet.tasks == []
+
+
+def test_invalid_update_raises_and_restores_old_values():
+    task = Task("Walk", 30)
+
+    with pytest.raises(ValueError):
+        task.update(title="Run", duration_minutes=0)
+
+    assert (task.title, task.duration_minutes) == ("Walk", 30)
+
+
+def test_availability_must_end_after_it_starts():
+    with pytest.raises(ValueError):
+        Owner("Jordan", time(21, 0), time(7, 0))

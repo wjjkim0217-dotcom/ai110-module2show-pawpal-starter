@@ -75,19 +75,48 @@ Today's Schedule (Thursday, October 15) for Jordan
 
 ## 🧪 Testing PawPal+
 
+Run the full suite from the project root (with the virtual environment active):
+
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest          # add -v to list every test
 ```
 
-Sample test output:
+The tests are in `tests/test_pawpal.py` and exercise `pawpal_system.py` directly, with no Streamlit involved. They cover:
+
+- **Sorting:** `sort_by_time` returns tasks in clock order with untimed tasks last. Built plans list entries chronologically, and flexible tasks are placed by priority.
+- **Recurring tasks:** Completing a daily task creates one due the next day, and a weekly task renews on its next weekday. Once tasks don't renew, completing twice doesn't create a duplicate, and `Scheduler.mark_complete` adds the new task to the right pet.
+- **Conflict detection:** Overlapping fixed-time tasks are flagged with a suggested free slot, and tasks at the exact same time are flagged for the same pet and across pets. Same-pet overlaps are marked as likely duplicates, and back-to-back tasks are not conflicts.
+- **Edge cases:**
+  - An owner with no pets, or a pet with no tasks, gives an empty plan.
+  - A fixed task outside the availability window is unscheduled.
+  - A task exactly as long as the window fits, and one a minute longer does not.
+- **Validation:**
+  - Empty titles, non-positive durations and weekly tasks without a weekday are rejected.
+  - A failed `Task.update` restores the old values.
+  - An availability window that ends before it starts is rejected.
+- **Filtering:** Tasks can be filtered by pet name (case-insensitive) and by done or pending status.
+
+Not covered yet: `Plan.is_stale_for` (still a stub) and `Preferences.preferred_times` (stored but not used by the scheduler).
+
+Output of a successful run of `python -m pytest`:
 
 ```
-# Paste your pytest output here
+============================= test session starts =============================
+platform win32 -- Python 3.13.15, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\wjkim\Documents\ai110-module2show-pawpal-starter
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.15.1
+collected 27 items
+
+tests\test_pawpal.py ...........................                         [100%]
+
+============================= 27 passed in 0.06s ==============================
 ```
+
+**Confidence level: ★★★★☆ (4 / 5)**
+
+All 27 tests pass, including the three core behaviors (chronological sorting, daily and weekly recurrence, and duplicate-time conflict detection) and the main edge cases (empty pets, window boundaries, invalid input). I'm holding back one star because the tests only run `pawpal_system.py`, not the Streamlit UI. `Plan.is_stale_for` is an untested stub. `Preferences.preferred_times` is unused, and I haven't tested a task update that mixes a valid field with an unknown one.
 
 ## 📐 Smarter Scheduling
 
