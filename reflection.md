@@ -60,14 +60,14 @@ This is reasonable because a fixed time is something the owner committed to, suc
 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
-I used AI tools for every stel of this project. Utilizing the direct text from the instructions were most helpful as the instructions gave clear guidance you would give a student to implement (which is also what AI requires).
+I used AI tools for every step of this project (design, UI, algorithms, testing, docs). Utilizing the direct text from the instructions were most helpful as the instructions gave clear guidance you would give a student to implement (which is also what AI requires). AI reviewed the skeleton and UML and I took some of the suggestions while declining others.
 
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
 When I asked AI to make the tests directory and the testing file, it also automatically created 30 tests which I rejected. I then prompted it to add two tests which I verified manually.
 - How did you evaluate or verify what the AI suggested?
-I use my knowledge of coding and use my judgement to evaluate whether I should accept what the AI suggested.
+I use my knowledge of coding and use my judgement to evaluate whether I should accept what the AI suggested. I also utilized the tests written in main.py as well as pytest.
 
 ---
 
@@ -117,7 +117,7 @@ It was satisfying to build something concrete with clear instructions (as is wha
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
-None.
+I would probably add tests for the Streamlit UI since it is currently only checked by running by hand.
 
 **c. Key takeaway**
 
